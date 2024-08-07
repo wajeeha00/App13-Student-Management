@@ -1,9 +1,13 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction,QIcon
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QGridLayout, QLineEdit, QPushButton , \
-QFormLayout, QComboBox, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QMessageBox, QToolBar, QStatusBar
+from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, 
+    QVBoxLayout, QLineEdit, QComboBox, QPushButton, QToolBar, QStatusBar, 
+    QMessageBox, QLabel, QGridLayout
+)
 import sys
 import sqlite3
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -15,7 +19,6 @@ class MainWindow(QMainWindow):
         help_menu_item = self.menuBar().addMenu("&Help")
         edit_menu_item = self.menuBar().addMenu("&Edit")
 
-        
         add_student_action = QAction("Add Student", self)
         add_student_action.triggered.connect(self.insert)
         file_menu_item.addAction(add_student_action)
@@ -24,7 +27,6 @@ class MainWindow(QMainWindow):
         help_menu_item.addAction(about_action)
         about_action.setMenuRole(QAction.MenuRole.NoRole)
         about_action.triggered.connect(self.about)
-
 
         search_action = QAction("Search", self)
         edit_menu_item.addAction(search_action)
@@ -39,28 +41,25 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar()
         toolbar.setMovable(True)
         self.addToolBar(toolbar)
-        toolbar.action = QAction(QIcon("icons/add.png"),"Add Student", self)
-        toolbar.action.triggered.connect(self.insert)
-        toolbar.addAction(toolbar.action)
 
-        toolbar.action = QAction(QIcon("icons/search.png"),"Search", self)
-        toolbar.action.triggered.connect(self.search)
-        toolbar.addAction(toolbar.action)
+        toolbar_action_add = QAction(QIcon("icons/add.png"), "Add Student", self)
+        toolbar_action_add.triggered.connect(self.insert)
+        toolbar.addAction(toolbar_action_add)
 
-        #create status bar
+        toolbar_action_search = QAction(QIcon("icons/search.png"), "Search", self)
+        toolbar_action_search.triggered.connect(self.search)
+        toolbar.addAction(toolbar_action_search)
+
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
 
-        #detect a cell click
         self.table.cellClicked.connect(self.cell_clicked)
 
     def cell_clicked(self):
         edit_button = QPushButton('Edit Record')
         edit_button.clicked.connect(self.edit)
 
-       
-
-        delete_button = QPushButton('delete Record')
+        delete_button = QPushButton('Delete Record')
         delete_button.clicked.connect(self.delete)
 
         children = self.statusbar.findChildren(QPushButton)
@@ -69,17 +68,17 @@ class MainWindow(QMainWindow):
                 self.statusbar.removeWidget(child)
         self.statusbar.addWidget(edit_button)
         self.statusbar.addWidget(delete_button)
-    
+
     def about(self):
-        dialog = AboutDialog()
+        dialog = AboutDialog(self)
         dialog.exec()
 
     def delete(self):
-        dialog = DeleteDialog()
+        dialog = DeleteDialog(self)
         dialog.exec()
-    
+
     def edit(self):
-        dialog = EditDialog()
+        dialog = EditDialog(self)
         dialog.exec()
 
     def load_data(self):
@@ -93,25 +92,27 @@ class MainWindow(QMainWindow):
         connection.close()
 
     def insert(self):
-        dialog = InsertDialog()
+        dialog = InsertDialog(self)
         dialog.exec()
 
     def search(self):
-        dialog = SearchDialog()
+        dialog = SearchDialog(self)
         dialog.exec()
 
+
 class AboutDialog(QMessageBox):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setWindowTitle('About')
         content = """ 
         This app was created by Wajeeha Aftab by following the tutorial at Udemy.
         """
         self.setText(content)
 
+
 class DeleteDialog(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setWindowTitle('Delete Student Data')
 
         layout = QGridLayout()
@@ -126,9 +127,7 @@ class DeleteDialog(QDialog):
 
         yes.clicked.connect(self.delete_student)
         no.clicked.connect(self.close)
-    
-   
-    
+
     def delete_student(self):
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
@@ -141,11 +140,11 @@ class DeleteDialog(QDialog):
 
         confirmation = QMessageBox()
         confirmation.setText('Record deleted successfully')
-
         confirmation.exec()
 
+
 class EditDialog(QDialog):
-     def __init__(self, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Update Student Data')
         self.setFixedWidth(300)
@@ -158,12 +157,11 @@ class EditDialog(QDialog):
         course_name = main_window.table.item(index, 2).text()
         mobile = main_window.table.item(index, 3).text()
 
-
         self.student_name = QLineEdit(self)
         self.student_name.setText(student_name)
         layout.addWidget(self.student_name)
 
-        self.course= QComboBox()
+        self.course = QComboBox()
         courses = ['Math', 'Astronomy', 'Physics', 'Biology']
         self.course.addItems(courses)
         self.course.setCurrentText(course_name)
@@ -178,16 +176,17 @@ class EditDialog(QDialog):
         layout.addWidget(self.button)
 
         self.setLayout(layout)
-    
-     def update_student(self):
+
+    def update_student(self):
         connection = sqlite3.connect('database.db')
         cursor = connection.cursor()
-        cursor.execute('UPDATE students SET name = ?, course = ?, mobile = ? WHERE id = ?', (self.student_name.text(), self.course.itemText(self.course.currentIndex()), self.mobile.text(), main_window.table.item(main_window.table.currentRow(), 0).text()))
+        cursor.execute('UPDATE students SET name = ?, course = ?, mobile = ? WHERE id = ?', 
+                       (self.student_name.text(), self.course.currentText(), self.mobile.text(), main_window.table.item(main_window.table.currentRow(), 0).text()))
         connection.commit()
         cursor.close()
         connection.close()
-        #refresh the table
         main_window.load_data()
+        self.close()
 
 
 class InsertDialog(QDialog):
@@ -203,7 +202,7 @@ class InsertDialog(QDialog):
         self.student_name.setPlaceholderText('Enter student name')
         layout.addWidget(self.student_name)
 
-        self.course= QComboBox()
+        self.course = QComboBox()
         courses = ['Math', 'Science', 'History', 'Geography', 'Computer Science']
         self.course.addItems(courses)
         layout.addWidget(self.course)
@@ -220,7 +219,7 @@ class InsertDialog(QDialog):
 
     def add_student(self):
         name = self.student_name.text()
-        course = self.course.itemText(self.course.currentIndex())
+        course = self.course.currentText()
         mobile = self.mobile.text()
 
         if name and course and mobile:
@@ -231,10 +230,11 @@ class InsertDialog(QDialog):
             cursor.close()
             connection.close()
 
-            self.parent().load_data()
+            main_window.load_data()
             self.close()
         else:
             QMessageBox.warning(self, 'Error', 'Please fill in all fields')
+
 
 class SearchDialog(QDialog):
     def __init__(self, parent=None):
@@ -270,9 +270,9 @@ class SearchDialog(QDialog):
                 QMessageBox.information(self, 'Success', f'Name: {result[1]}\nCourse: {result[2]}\nMobile: {result[3]}')
             else:
                 QMessageBox.warning(self, 'Error', 'Student not found')
-            self.close()
         else:
             QMessageBox.warning(self, 'Error', 'Please fill in all fields')
+
 
 app = QApplication(sys.argv)
 main_window = MainWindow()
