@@ -8,6 +8,12 @@ from PyQt6.QtWidgets import (
 import sys
 import sqlite3
 
+class DatabaseConnection:
+    def __init__(self,database_file = 'database.db'):
+        self.database_file = database_file
+    def connect(self):
+        connection = sqlite3.connect(self.database_file)
+        return connection
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -82,7 +88,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def load_data(self):
-        connection = sqlite3.connect("database.db")
+        connection = DatabaseConnection().connect()
         result = connection.execute("SELECT * FROM students")
         self.table.setRowCount(0)
         for row_number, row_data in enumerate(result):
@@ -129,7 +135,7 @@ class DeleteDialog(QDialog):
         no.clicked.connect(self.close)
 
     def delete_student(self):
-        connection = sqlite3.connect('database.db')
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute('DELETE FROM students WHERE id = ?', (main_window.table.item(main_window.table.currentRow(), 0).text(),))
         connection.commit()
@@ -223,7 +229,7 @@ class InsertDialog(QDialog):
         mobile = self.mobile.text()
 
         if name and course and mobile:
-            connection = sqlite3.connect('database.db')
+            connection = DatabaseConnection().connect()
             cursor = connection.cursor()
             cursor.execute('INSERT INTO students (name, course, mobile) VALUES (?, ?, ?)', (name, course, mobile))
             connection.commit()
@@ -259,7 +265,7 @@ class SearchDialog(QDialog):
         name = self.student_name.text()
 
         if name:
-            connection = sqlite3.connect('database.db')
+            connection = DatabaseConnection().connect()
             cursor = connection.cursor()
             cursor.execute('SELECT * FROM students WHERE name = ?', (name,))
             result = cursor.fetchone()
